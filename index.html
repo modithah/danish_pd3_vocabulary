@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matching Danish Words</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+  }
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .dropdown {
+    margin-bottom: 20px; /* Add margin at bottom */
+  }
+  .columns-container {
+    display: flex; /* Use flexbox for columns */
+    justify-content: space-between; /* Space between columns */
+  }
+  .column {
+    width: 45%; /* Set width of each column */
+  }
+  .button {
+    padding: 10px 20px;
+    margin: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  .match {
+    background-color: #7fff7f;
+  }
+  .wrong {
+    animation: flash 0.5s;
+  }
+  @keyframes flash {
+    0% { background-color: #f00; }
+    50% { background-color: #fff; }
+    100% { background-color: #f00; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Matching Danish Words</h1>
+  <div class="dropdown">
+    <label for="csv-select">Select CSV file:</label>
+    <select id="csv-select"></select>
+  </div>
+  <div class="columns-container">
+    <div class="column">
+      <h2>Danish</h2>
+      <div id="danish-words"></div>
+    </div>
+    <div class="column">
+      <h2>English</h2>
+      <div id="english-words"></div>
+    </div>
+  </div>
+  <div id="score">Score: 0</div>
+</div>
+
+<script>
+  let words;
+  let score = 0;
+  let currentBatchIndex = 0;
+  const batchSize = 5;
+
+  // Define the folder containing CSV files
+  const csvFolder = 'csv_folder/';
+
+  // Array of CSV filenames
+  const csvFiles = ['climate and environment.csv', 'connecting words.csv', 'prepositions.csv']; // Add more filenames if needed
+
+  // Populate the dropdown with CSV filenames
+  const csvSelect = document.getElementById('csv-select');
+  csvFiles.forEach(file => {
+    const option = document.createElement('option');
+    option.value = csvFolder + file; // Prepend folder name to file
+    option.textContent = file.slice(0, -4); // Extract filename without extension
+    csvSelect.appendChild(option);
+  });
+
+  // Fetch CSV file based on selected option
+  document.getElementById('csv-select').addEventListener('change', function() {
+    const selectedCSV = this.value;
+    fetch(selectedCSV)
+      .then(response => response.text())
+      .then(data => {
+        words = parseCSV(data);
+        generateGame(words);
+      })
+      .catch(error => console.error('Error fetching CSV:', error));
+  });
+
+  // Parse CSV data
+  function parseCSV(csv) {
+    const lines = csv.split('\n');
+    const parsedData = [];
+    for (let i = 0; i < lines.length; i++) {
+      const wordsArray = lines[i].split(',');
+      parsedData.push({
+        index: i,
+        danish: wordsArray[0],
+        translation: wordsArray[1]
+      });
+    }
+    return parsedData;
+  }
+
+  // Shuffle function
+  function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  // Generate game HTML
+ // Generate game HTML
+function generateGame(words) {
+    // Get a batch of words
+    const batch = words.slice(currentBatchIndex, currentBatchIndex + batchSize);
+    currentBatchIndex += batchSize;
+
+    // If there are no more words, reset the index to 0
+    if (currentBatchIndex >= words.length) {
+      currentBatchIndex = 0;
+    }
+
+    // Shuffle pairs of Danish and English words together
+    const shuffledWords = shuffle(batch);
+    const shuffledWordsWithIndex = shuffledWords.map((word, index) => {
+      return {
+        index: index,
+        danish: word.danish,
+        translation: word.translation
+      };
+    });
+
+    // Separate Danish and English words
+    const danishWords = shuffledWordsWithIndex.map(word => {return {
+        index: word.index,
+        danish: word.danish,
+      }});
+    const englishWords = shuffledWordsWithIndex.map(word => {return {
+        index: word.index,
+        translation: word.translation,
+      }});
+
+    // Shuffle Danish and English words independently
+    const shuffledDanishWords = shuffle(danishWords);
+    const shuffledEnglishWords = shuffle(englishWords);
+
+    const danishContainer = document.getElementById('danish-words');
+    const englishContainer = document.getElementById('english-words');
+
+    // Clear previous words
+    danishContainer.innerHTML = '';
+    englishContainer.innerHTML = '';
+
+    // Create buttons for Danish words
+    shuffledDanishWords.forEach((danishWord) => {
+      const buttonDanish = document.createElement('button');
+      buttonDanish.classList.add('button');
+      buttonDanish.textContent = danishWord.danish;
+      buttonDanish.dataset.index = danishWord.index; // Assign index to dataset
+      buttonDanish.onclick = () => checkMatch(danishWord.index);
+      danishContainer.appendChild(buttonDanish);
+    });
+
+    // Create buttons for English words
+    shuffledEnglishWords.forEach((englishWord) => {
+      const buttonEnglish = document.createElement('button');
+      buttonEnglish.classList.add('button');
+      buttonEnglish.textContent = englishWord.translation;
+      buttonEnglish.dataset.index = englishWord.index; // Assign index to dataset
+      buttonEnglish.onclick = () => checkMatch(englishWord.index);
+      englishContainer.appendChild(buttonEnglish);
+    });
+  }
+
+
+  // Check if the clicked pair matches
+  let firstClicked = null;
+  function checkMatch(index) {
+    if (firstClicked === null) {
+      firstClicked = index;
+    } else {
+      if (firstClicked === index) {
+        document.querySelectorAll('.button').forEach(button => {
+          if (parseInt(button.dataset.index) === index) {
+            button.classList.add('match');
+            button.disabled = true;
+          }
+        });
+        score++; // Increment score for correct match
+        document.getElementById('score').textContent = 'Score: ' + score;
+      } else {
+        score -= 0.5; // Deduct 0.5 points for wrong match
+        if (score < 0) score = 0; // Ensure score is not negative
+        document.getElementById('score').textContent = 'Score: ' + score;
+        // Flash wrong buttons in red
+        document.querySelectorAll('.button').forEach(button => {
+          if (parseInt(button.dataset.index) === index) {
+            button.classList.add('wrong');
+            setTimeout(() => {
+              button.classList.remove('wrong');
+            }, 500);
+          }
+        });
+      }
+      firstClicked = null;
+
+      // Check if all matches are completed
+      const allMatchesCompleted = Array.from(document.querySelectorAll('.button')).every(button => button.disabled);
+      if (allMatchesCompleted) {
+        setTimeout(() => {
+          generateGame(words);
+        }, 1000);
+      }
+    }
+  }
+</script>
+
+</body>
+</html>
