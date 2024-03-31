@@ -52,7 +52,7 @@
 <div class="container">
   <h1>Matching Danish Words</h1>
   <div class="dropdown">
-    <label for="csv-select">Select CSV file:</label>
+    <label for="csv-select">Select Topic file:</label>
     <select id="csv-select"></select>
   </div>
   <div class="columns-container">
@@ -98,7 +98,7 @@
         words = parseCSV(data);
         generateGame(words);
       })
-      .catch(error => console.error('Error fetching CSV:', error));
+      .catch(error => console.error('Error fetching Topic:', error));
   });
 
   // Parse CSV data
@@ -230,6 +230,17 @@ function generateGame(words) {
       }
     }
   }
+
+  window.onload = function() {
+            // Get the dropdown element
+            var dropdown = document.getElementById('csv-select');
+
+            // Select a random index
+    // Set the selected index to the random index
+            dropdown.selectedIndex = Math.floor(Math.random() * dropdown.options.length);
+            var event = new Event('change');
+            dropdown.dispatchEvent(event);
+        };
 </script>
 
 </body>
